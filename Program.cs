@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
+using Microsoft.Identity.Web.Resource;
 using minimalAPIB2C;
 
 string[] Summaries = new[]
@@ -21,8 +22,9 @@ var app = builder.Build();
 // This is an authenticated endpoint
 app.MapGet("/weatherForecast", (HttpContext context) => 
 {
+    context.VerifyUserHasAnyAcceptedScope(new string[] { "access_as_user2" });
     // verify that the incoming request has the right scope(s)
-    AuthHelper.UserHasAnyAcceptedScopes(context, new string[] {"access_as_user"});
+    //AuthHelper.UserHasAnyAcceptedScopes(context, new string[] {"access_as_user"});
     return Enumerable.Range(1, 5).Select(index => new WeatherForecast
         {
             Date = DateTime.Now.AddDays(index),
