@@ -1,7 +1,11 @@
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
-using Microsoft.OpenApi.Models;
+using minimalAPIB2C;
+
+string[] Summaries = new[]
+{
+    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+};
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,27 +13,34 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAdB2C"));
 
-builder.Services.AddControllers();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new() { Title = "minimalAPIB2C", Version = "v1" });
-});
+builder.Services.AddCors(options => options.AddPolicy("allowAny", o => o.AllowAnyOrigin()));
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// This is an authenticated endpoint
+app.MapGet("/weatherForecast", (HttpContext context) => 
+{
+    // verify that the incoming request has the right scope(s)
+    AuthHelper.UserHasAnyAcceptedScopes(context, new string[] {"access_as_user"});
+    return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+        {
+            Date = DateTime.Now.AddDays(index),
+            TemperatureC = Random.Shared.Next(-20, 55),
+            Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+        })
+        .ToArray(); 
+}).RequireAuthorization();
+
 if (builder.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-    app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "minimalAPIB2C v1"));
 }
 
 app.UseHttpsRedirection();
+app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.MapControllers();
 
 app.Run();
